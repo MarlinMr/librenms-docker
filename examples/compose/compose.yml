@@ -35,7 +35,7 @@ services:
     restart: always
 
   librenms:
-    image: marlinmr/librenms:24.9.1
+    image: marlinmr/librenms:26.2.0
     container_name: librenms
     hostname: librenms
     cap_add:
@@ -65,7 +65,7 @@ services:
     restart: always
 
   dispatcher:
-    image: marlinmr/librenms:24.9.1
+    image: marlinmr/librenms:26.2.0
     container_name: librenms_dispatcher
     hostname: librenms-dispatcher
     cap_add:
@@ -92,7 +92,7 @@ services:
     restart: always
 
   syslogng:
-    image: marlinmr/librenms:24.9.1
+    image: marlinmr/librenms:26.2.0
     container_name: librenms_syslogng
     hostname: librenms-syslogng
     cap_add:
@@ -125,7 +125,7 @@ services:
     restart: always
 
   snmptrapd:
-    image: marlinmr/librenms:24.9.1
+    image: marlinmr/librenms:26.2.0
     container_name: librenms_snmptrapd
     hostname: librenms-snmptrapd
     cap_add:
