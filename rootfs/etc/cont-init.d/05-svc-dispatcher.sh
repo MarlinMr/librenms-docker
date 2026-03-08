@@ -29,6 +29,9 @@ DB_PORT=${DB_PORT:-3306}
 DB_NAME=${DB_NAME:-librenms}
 DB_USER=${DB_USER:-librenms}
 DB_TIMEOUT=${DB_TIMEOUT:-60}
+LOG_CHANNEL=${LOG_CHANNEL:-stdout}
+LOG_LEVEL=${LOG_LEVEL:-warning}
+STDOUT_LOG_LEVEL=${STDOUT_LOG_LEVEL:-$LOG_LEVEL}
 
 SIDECAR_DISPATCHER=${SIDECAR_DISPATCHER:-0}
 #DISPATCHER_NODE_ID=${DISPATCHER_NODE_ID:-dispatcher1}
@@ -56,7 +59,7 @@ if [ -z "$DB_PASSWORD" ]; then
   exit 1
 fi
 
-dbcmd="mysql -h ${DB_HOST} -P ${DB_PORT} -u "${DB_USER}" "-p${DB_PASSWORD}""
+dbcmd="mariadb -h ${DB_HOST} -P ${DB_PORT} -u "${DB_USER}" "-p${DB_PASSWORD}""
 unset DB_PASSWORD
 
 echo "Waiting ${DB_TIMEOUT}s for database to be ready..."
@@ -94,20 +97,20 @@ fi
 if [ -z "$REDIS_HOST" ] && [ -z "$REDIS_SENTINEL" ]; then
   echo >&2 "ERROR: REDIS_HOST or REDIS_SENTINEL must be defined"
   exit 1
-elif [ -n "$REDIS_HOST" ]; then
-  echo "Setting Redis"
-  cat >>${LIBRENMS_PATH}/.env <<EOL
-REDIS_HOST=${REDIS_HOST}
-REDIS_SCHEME=${REDIS_SCHEME}
-REDIS_PORT=${REDIS_PORT}
-REDIS_PASSWORD=${REDIS_PASSWORD}
-REDIS_DB=${REDIS_DB}
-EOL
 elif [ -n "$REDIS_SENTINEL" ]; then
   echo "Setting Redis Sentinel"
   cat >>${LIBRENMS_PATH}/.env <<EOL
 REDIS_SENTINEL=${REDIS_SENTINEL}
 REDIS_SENTINEL_SERVICE=${REDIS_SENTINEL_SERVICE}
+REDIS_SCHEME=${REDIS_SCHEME}
+REDIS_PORT=${REDIS_PORT}
+REDIS_PASSWORD=${REDIS_PASSWORD}
+REDIS_DB=${REDIS_DB}
+EOL
+elif [ -n "$REDIS_HOST" ]; then
+  echo "Setting Redis"
+  cat >>${LIBRENMS_PATH}/.env <<EOL
+REDIS_HOST=${REDIS_HOST}
 REDIS_SCHEME=${REDIS_SCHEME}
 REDIS_PORT=${REDIS_PORT}
 REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -121,6 +124,7 @@ cat >/etc/services.d/dispatcher/run <<EOL
 #!/usr/bin/execlineb -P
 with-contenv
 s6-setuidgid ${PUID}:${PGID}
-/opt/librenms/librenms-service.py ${DISPATCHER_ARGS}
+cd /opt/librenms
+./librenms-service.py ${DISPATCHER_ARGS}
 EOL
 chmod +x /etc/services.d/dispatcher/run

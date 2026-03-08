@@ -128,7 +128,7 @@ if [ -d "${LIBRENMS_PATH}/html/plugins/Weathermap" ]; then
     ln -sf /data/weathermap ${LIBRENMS_PATH}/html/plugins/Weathermap/configs
   fi
   chown -h librenms:librenms ${LIBRENMS_PATH}/html/plugins/Weathermap/configs
-  chown -R librenms:librenms /data/weathermap ${LIBRENMS_PATH}/html/plugins/Weathermap/output
+  find /data/weathermap ${LIBRENMS_PATH}/html/plugins/Weathermap/output \( ! -user librenms -o ! -group librenms \) -exec chown librenms:librenms {} +
 fi
 
 # cleanup bad symlink: https://github.com/librenms/docker/issues/294#issuecomment-1190389960
@@ -273,7 +273,7 @@ done
 # Fix perms
 echo "Fixing perms..."
 chown librenms:librenms /data/config /data/monitoring-plugins /data/plugins /data/rrd /data/weathermap /data/alert-templates
-chown -R librenms:librenms /data/logs ${LIBRENMS_PATH}/config.d ${LIBRENMS_PATH}/bootstrap ${LIBRENMS_PATH}/logs ${LIBRENMS_PATH}/storage
+find /data/logs ${LIBRENMS_PATH}/composer* ${LIBRENMS_PATH}/config.d ${LIBRENMS_PATH}/bootstrap ${LIBRENMS_PATH}/logs ${LIBRENMS_PATH}/storage ${LIBRENMS_PATH}/vendor \( ! -user librenms -o ! -group librenms \) -exec chown librenms:librenms {} +
 chmod ug+rw /data/logs /data/rrd ${LIBRENMS_PATH}/bootstrap/cache ${LIBRENMS_PATH}/storage ${LIBRENMS_PATH}/storage/framework/*
 
 # Check additional Monitoring plugins
