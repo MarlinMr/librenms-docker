@@ -51,7 +51,7 @@ services:
       - msmtpd
     volumes:
       - "/data/librenms/librenms:/data"
-      - "/data/librenms/librenms-plugins:/data/monitoring-plugins"
+      - "/data/librenms/monitoring-plugins:/data/monitoring-plugins"
     env_file:
       - "./librenms.env"
     environment:
