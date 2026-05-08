@@ -11,7 +11,7 @@ services:
       - "--character-set-server=utf8mb4"
       - "--collation-server=utf8mb4_unicode_ci"
     volumes:
-      - "./db:/var/lib/mysql"
+      - "/data/librenms/db:/var/lib/mysql"
     environment:
       - "TZ=${TZ}"
       - "MARIADB_RANDOM_ROOT_PASSWORD=yes"
@@ -35,7 +35,7 @@ services:
     restart: always
 
   librenms:
-    image: librenms/librenms:latest
+    image: marlinmr/librenms:ntp-iperf3
     container_name: librenms
     hostname: librenms
     cap_add:
@@ -50,7 +50,8 @@ services:
       - redis
       - msmtpd
     volumes:
-      - "./librenms:/data"
+      - "/data/librenms/librenms:/data"
+      - "/data/librenms/librenms-plugins:/data/monitoring-plugins"
     env_file:
       - "./librenms.env"
     environment:
@@ -65,7 +66,7 @@ services:
     restart: always
 
   dispatcher:
-    image: librenms/librenms:latest
+    image: marlinmr/librenms:ntp-iperf3
     container_name: librenms_dispatcher
     hostname: librenms-dispatcher
     cap_add:
@@ -75,7 +76,7 @@ services:
       - librenms
       - redis
     volumes:
-      - "./librenms:/data"
+      - "/data/librenms/librenms:/data"
     env_file:
       - "./librenms.env"
     environment:
@@ -92,7 +93,7 @@ services:
     restart: always
 
   syslogng:
-    image: librenms/librenms:latest
+    image: marlinmr/librenms:ntp-iperf3
     container_name: librenms_syslogng
     hostname: librenms-syslogng
     cap_add:
@@ -109,7 +110,7 @@ services:
         published: 514
         protocol: udp
     volumes:
-      - "./librenms:/data"
+      - "/data/librenms/librenms:/data"
     env_file:
       - "./librenms.env"
     environment:
@@ -125,7 +126,7 @@ services:
     restart: always
 
   snmptrapd:
-    image: librenms/librenms:latest
+    image: marlinmr/librenms:ntp-iperf3
     container_name: librenms_snmptrapd
     hostname: librenms-snmptrapd
     cap_add:
@@ -142,7 +143,7 @@ services:
         published: 162
         protocol: udp
     volumes:
-      - "./librenms:/data"
+      - "/data/librenms/librenms:/data"
     env_file:
       - "./librenms.env"
     environment:

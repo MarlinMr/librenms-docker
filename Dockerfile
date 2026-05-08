@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # renovate: datasource=github-releases packageName=librenms/librenms versioning=semver
-ARG LIBRENMS_VERSION="26.4.1"
+ARG LIBRENMS_VERSION="ntp"
 ARG ALPINE_VERSION="3.22"
 ARG SYSLOGNG_VERSION="4.8.3-r1"
 
@@ -25,6 +25,7 @@ RUN apk --update --no-cache add \
     imagemagick \
     ipmitool \
     iputils \
+    iperf3 \
     libcap-utils \
     mariadb-client \
     monitoring-plugins \
@@ -83,7 +84,7 @@ RUN apk --update --no-cache add \
     musl-dev \
     python3-dev \
   && pip3 install --upgrade --break-system-packages pip \
-  && pip3 install python-memcached mysqlclient --upgrade --break-system-packages \
+  && pip3 install python-memcached mysqlclient iperf3 --upgrade --break-system-packages \
   && curl -sSL https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer \
   && apk del build-dependencies \
   && rm -rf /var/www/* /tmp/* \
@@ -122,8 +123,8 @@ RUN apk --update --no-cache add -t build-dependencies \
     linux-headers \
     musl-dev \
     python3-dev \
-  && echo "Installing LibreNMS https://github.com/librenms/librenms.git#${LIBRENMS_VERSION}..." \
-  && git clone --depth=1 --branch ${LIBRENMS_VERSION} https://github.com/librenms/librenms.git . \
+  && echo "Installing LibreNMS https://github.com/marlinmr/librenms-librenms.git#${LIBRENMS_VERSION}..." \
+  && git clone --depth=1 --branch ${LIBRENMS_VERSION} https://github.com/marlinmr/librenms-librenms.git . \
   && pip3 install --ignore-installed -r requirements.txt --upgrade --break-system-packages \
   && mkdir config.d \
   && cp config.php.default config.php \
