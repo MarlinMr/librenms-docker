@@ -98,7 +98,6 @@ Following platforms for this image are available:
 $ docker buildx imagetools inspect librenms/librenms --format "{{json .Manifest}}" | \
   jq -r '.manifests[] | select(.platform.os != null and .platform.os != "unknown") | .platform | "\(.os)/\(.architecture)\(if .variant then "/" + .variant else "" end)"'
 
-linux/386
 linux/amd64
 linux/arm/v7
 linux/arm64
