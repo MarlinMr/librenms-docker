@@ -4,8 +4,11 @@
 ARG LIBRENMS_VERSION="26.8.1"
 ARG ALPINE_VERSION="3.23"
 ARG SYSLOGNG_VERSION="4.10.2-r1"
+ARG GOSU_VERSION="1.17"
+ARG PUID="1000"
+ARG PGID="1000"
 
-FROM tianon/gosu:latest AS gosu
+FROM tianon/gosu:${GOSU_VERSION} AS gosu
 
 FROM crazymax/alpine-s6:${ALPINE_VERSION}-2.2.0.3
 COPY --from=gosu /gosu /usr/local/bin/
@@ -69,9 +72,7 @@ RUN apk --update --no-cache add \
     python3 \
     py3-pip \
     rrdtool \
-    runit \
-    sed \
-    shadow \
+    syslog-ng=${SYSLOGNG_VERSION} \
     ttf-dejavu \
     tzdata \
     util-linux \
@@ -99,24 +100,17 @@ RUN apk --update --no-cache add \
   && setcap cap_net_raw+ep /usr/lib/monitoring-plugins/check_icmp \
   && setcap cap_net_raw+ep /usr/lib/monitoring-plugins/check_ping
 
-ARG SYSLOGNG_VERSION
-RUN apk --update --no-cache add syslog-ng=${SYSLOGNG_VERSION}
-
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS="2" \
   LIBRENMS_PATH="/opt/librenms" \
   LIBRENMS_DOCKER="1" \
-  TZ="UTC" \
-  PUID="1000" \
-  PGID="1000"
+  TZ="UTC"
 
 RUN addgroup -g ${PGID} librenms \
-  && adduser -D -h /home/librenms -u ${PUID} -G librenms -s /bin/sh -D librenms \
-  && curl -sSLk -q https://raw.githubusercontent.com/librenms/librenms-agent/master/snmp/distro -o /usr/bin/distro \
+  && adduser -D -h /home/librenms -u ${PUID} -G librenms -s /bin/sh librenms \
+  && curl -sSL https://raw.githubusercontent.com/librenms/librenms-agent/master/snmp/distro -o /usr/bin/distro \
   && chmod +x /usr/bin/distro
 
 WORKDIR ${LIBRENMS_PATH}
-ARG LIBRENMS_VERSION
-ARG WEATHERMAP_PLUGIN_COMMIT
 RUN apk --update --no-cache add -t build-dependencies \
     build-base \
     linux-headers \
@@ -124,7 +118,7 @@ RUN apk --update --no-cache add -t build-dependencies \
     python3-dev \
   && echo "Installing LibreNMS https://github.com/librenms/librenms.git#${LIBRENMS_VERSION}..." \
   && git clone --depth=1 --branch ${LIBRENMS_VERSION} https://github.com/librenms/librenms.git . \
-  && pip3 install --ignore-installed -r requirements.txt --upgrade --break-system-packages \
+  && pip3 install -r requirements.txt --upgrade --break-system-packages \
   && mkdir config.d \
   && cp config.php.default config.php \
   && cp snmpd.conf.example /etc/snmp/snmpd.conf \
@@ -144,5 +138,18 @@ COPY rootfs /
 
 EXPOSE 8000 514 514/udp 162 162/udp
 VOLUME [ "/data" ]
+
+LABEL org.opencontainers.image.title="LibreNMS" \
+  org.opencontainers.image.description="Autodiscovering PHP/MySQL/SNMP based network monitoring" \
+  org.opencontainers.image.url="https://www.librenms.org" \
+  org.opencontainers.image.source="https://github.com/librenms/docker" \
+  org.opencontainers.image.licenses="GPL-3.0-only"
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:8000/api/v0/health || exit 1
+
+STOPSIGNAL SIGTERM
+
+USER librenms
 
 ENTRYPOINT [ "/init" ]
