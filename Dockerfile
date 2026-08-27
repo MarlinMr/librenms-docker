@@ -4,14 +4,81 @@
 ARG LIBRENMS_VERSION="26.8.1"
 ARG ALPINE_VERSION="3.23"
 ARG SYSLOGNG_VERSION="4.10.2-r1"
-ARG GOSU_VERSION="1.17"
+ARG GOSU_VERSION="1.19"
 ARG PUID="1000"
 ARG PGID="1000"
 
-FROM tianon/gosu:${GOSU_VERSION} AS gosu
+# Build stage
+FROM crazymax/alpine-s6:${ALPINE_VERSION}-2.2.0.3 AS builder
+ARG LIBRENMS_VERSION
+ARG SYSLOGNG_VERSION
 
+RUN apk --update --no-cache add \
+    git \
+    php84 \
+    php84-cli \
+    php84-phar \
+    php84-openssl \
+    php84-mbstring \
+    php84-xml \
+    php84-curl \
+    php84-zip \
+    php84-pdo_mysql \
+    php84-gd \
+    php84-ldap \
+    php84-snmp \
+    php84-gmp \
+    php84-posix \
+    php84-session \
+    php84-iconv \
+    php84-simplexml \
+    php84-dom \
+    php84-fileinfo \
+    php84-ctype \
+    php84-tokenizer \
+    php84-xmlwriter \
+    php84-mysqlnd \
+    php84-opcache \
+    php84-pecl-memcached \
+    php84-pdo \
+    php84-pdo_mysql \
+    php84-pear \
+    python3 \
+    py3-pip \
+    build-base \
+    linux-headers \
+    mariadb-dev \
+    musl-dev \
+    python3-dev \
+  && curl -sSL https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
+
+ENV LIBRENMS_PATH="/opt/librenms"
+WORKDIR ${LIBRENMS_PATH}
+
+RUN git clone --depth=1 --branch ${LIBRENMS_VERSION} https://github.com/librenms/librenms.git . \
+  && --mount=type=cache,target=/root/.cache/pip \
+     pip3 install -r requirements.txt --upgrade --break-system-packages \
+  && mkdir config.d \
+  && cp config.php.default config.php \
+  && cp snmpd.conf.example /etc/snmp/snmpd.conf \
+  && sed -i '/runningUser/d' lnms \
+  && echo "foreach (glob(\"/data/config/*.php\") as \$filename) include \$filename;" >> config.php \
+  && echo "foreach (glob(\"${LIBRENMS_PATH}/config.d/*.php\") as \$filename) include \$filename;" >> config.php
+
+RUN --mount=type=cache,target=/tmp/composer-cache \
+    COMPOSER_CACHE_DIR=/tmp/composer-cache composer install --no-dev --no-interaction --no-ansi \
+  && rm -rf .git \
+    html/plugins/Test \
+    doc/ \
+    tests/
+
+# Runtime stage
 FROM crazymax/alpine-s6:${ALPINE_VERSION}-2.2.0.3
-COPY --from=gosu /gosu /usr/local/bin/
+ARG GOSU_VERSION
+ARG SYSLOGNG_VERSION
+
+COPY --from=tianon/gosu:${GOSU_VERSION} /gosu /usr/local/bin/
+
 RUN apk --update --no-cache add \
     busybox-extras \
     acl \
@@ -23,7 +90,6 @@ RUN apk --update --no-cache add \
     curl \
     file \
     fping \
-    git \
     graphviz \
     imagemagick \
     ipmitool \
@@ -77,16 +143,6 @@ RUN apk --update --no-cache add \
     tzdata \
     util-linux \
     whois \
-  && apk --update --no-cache add -t build-dependencies \
-    build-base \
-    make \
-    mariadb-dev \
-    musl-dev \
-    python3-dev \
-  && pip3 install --upgrade --break-system-packages pip \
-  && pip3 install python-memcached mysqlclient --upgrade --break-system-packages \
-  && curl -sSL https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer \
-  && apk del build-dependencies \
   && rm -rf /var/www/* /tmp/* \
   && echo "/usr/sbin/fping -6 \$@" > /usr/sbin/fping6 \
   && chmod +x /usr/sbin/fping6 \
@@ -111,28 +167,8 @@ RUN addgroup -g ${PGID} librenms \
   && chmod +x /usr/bin/distro
 
 WORKDIR ${LIBRENMS_PATH}
-RUN apk --update --no-cache add -t build-dependencies \
-    build-base \
-    linux-headers \
-    musl-dev \
-    python3-dev \
-  && echo "Installing LibreNMS https://github.com/librenms/librenms.git#${LIBRENMS_VERSION}..." \
-  && git clone --depth=1 --branch ${LIBRENMS_VERSION} https://github.com/librenms/librenms.git . \
-  && pip3 install -r requirements.txt --upgrade --break-system-packages \
-  && mkdir config.d \
-  && cp config.php.default config.php \
-  && cp snmpd.conf.example /etc/snmp/snmpd.conf \
-  && sed -i '/runningUser/d' lnms \
-  && echo "foreach (glob(\"/data/config/*.php\") as \$filename) include \$filename;" >> config.php \
-  && echo "foreach (glob(\"${LIBRENMS_PATH}/config.d/*.php\") as \$filename) include \$filename;" >> config.php \
-  && chown -R librenms:librenms ${LIBRENMS_PATH} \
-  && su librenms -s /bin/sh -c "COMPOSER_CACHE_DIR=/tmp composer install --no-dev --no-interaction --no-ansi" \
-  && apk del build-dependencies \
-  && rm -rf .git \
-    html/plugins/Test \
-    doc/ \
-    tests/ \
-    /tmp/*
+
+COPY --from=builder --chown=librenms:librenms /opt/librenms /opt/librenms
 
 COPY rootfs /
 
