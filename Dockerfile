@@ -18,7 +18,10 @@ RUN apk --update --no-cache add \
     php84-simplexml php84-dom php84-fileinfo php84-ctype php84-tokenizer php84-xmlwriter php84-mysqlnd \
     php84-opcache php84-pecl-memcached php84-pdo php84-pear \
     python3 py3-pip build-base linux-headers mariadb-dev musl-dev python3-dev \
-  && curl -sSL https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
+  && curl -sSL https://getcomposer.org/installer -o /tmp/composer-setup.php \
+  && php -r "if (hash_file('sha384', '/tmp/composer-setup.php') === 'dac665fdc30fdd8ec78b38b9800061b4150413ff2e3b6f88543c636f7cd84f6db9189d43a81e5503cda447da73c7e5b6') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('/tmp/composer-setup.php'); exit(1); }" \
+  && php /tmp/composer-setup.php --install-dir=/usr/bin --filename=composer \
+  && rm /tmp/composer-setup.php
 
 ENV LIBRENMS_PATH="/opt/librenms"
 WORKDIR ${LIBRENMS_PATH}
@@ -52,8 +55,8 @@ RUN apk --update --no-cache add \
     php84-iconv php84-json php84-ldap php84-mbstring php84-mysqlnd php84-opcache php84-openssl \
     php84-pdo php84-pdo_mysql php84-pecl-memcached php84-pear php84-phar php84-posix php84-session \
     php84-simplexml php84-snmp php84-sockets php84-tokenizer php84-xml php84-xmlwriter php84-zip \
-    python3 py3-pip rrdtool syslog-ng=${SYSLOGNG_VERSION} ttf-dejavu tzdata util-linux whois \
-  && rm -rf /var/www/* /tmp/* \
+    rrdtool syslog-ng=${SYSLOGNG_VERSION} ttf-dejavu tzdata util-linux whois \
+  && rm -rf /var/www/* /tmp/* /var/cache/apk/* \
   && echo "/usr/sbin/fping -6 \$@" > /usr/sbin/fping6 && chmod +x /usr/sbin/fping6 \
   && chmod u+s,g+s /bin/ping /bin/ping6 /usr/lib/monitoring-plugins/check_icmp \
   && setcap cap_net_raw+ep /usr/bin/nmap /usr/sbin/fping /usr/sbin/fping6 \
@@ -67,7 +70,8 @@ ENV S6_BEHAVIOUR_IF_STAGE2_FAILS="2" \
 RUN addgroup -g ${PGID} librenms \
   && adduser -D -h /home/librenms -u ${PUID} -G librenms -s /bin/sh librenms \
   && curl -sSL https://raw.githubusercontent.com/librenms/librenms-agent/master/snmp/distro -o /usr/bin/distro \
-  && chmod +x /usr/bin/distro
+  && chmod +x /usr/bin/distro \
+  && chown -R librenms:librenms ${LIBRENMS_PATH}
 
 WORKDIR ${LIBRENMS_PATH}
 
