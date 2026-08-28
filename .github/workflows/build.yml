@@ -22,6 +22,7 @@ on:
 
 jobs:
   build:
+    if: github.repository == 'librenms/docker'
     uses: docker/github-builder/.github/workflows/bake.yml@v1
     permissions:
       contents: read # same as global permissions
