@@ -24,6 +24,7 @@ env:
 
 jobs:
   test:
+    if: github.repository == 'librenms/docker'
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.version == 'master' }}
     strategy:
